@@ -1,0 +1,68 @@
+version: '3.7'
+
+services:
+  # ==============================================
+  # Athendum Containers
+  # ==============================================
+
+  # Apache / PHP
+  athendum_web:
+    build:
+      context: ./
+      dockerfile: ./.docker/run/web.dockerfile
+    container_name: athendum_web
+    hostname: athendum.localhost
+    volumes:
+#      - ./.docker/ssh:/root/profile
+      - ./.docker/conf/athendum_apache/athendum.conf:/etc/apache2/sites-available/000-default.conf
+      - ./.docker/conf/athendum_php/athendum.ini:/usr/local/etc/php/conf.d/athendum.ini
+      - ./.docker/logs/athendum_apache:/var/log/apache2
+      - ./:/var/www/html
+    ports:
+      - "84:80"
+    links:
+      - athendum_db
+
+  # MySQL
+  athendum_db:
+    image: mariadb:10.3.11
+    container_name: athendum_db
+    restart: always
+    volumes:
+      - ./.docker/data/athendum_mysql/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - athendum_db_volume:/var/lib/mysql
+      - ./.docker/logs/athendum_mysql:/var/log/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "fr4cgmwh8iwf78r342ynier38"
+      MYSQL_DATABASE: "athendum_db"
+      MYSQL_USER: "athendum_db"
+      MYSQL_PASSWORD: "athendum_db"
+    command: mysqld --sql_mode=""
+    ports:
+      - "3308:3306"
+
+  # phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: athendum_phpmyadmin
+    hostname: athendum-cms-pma.localhost
+    restart: always
+    volumes:
+      - ./.docker/conf/athendum_phpmyadmin/phpmyadmin_config.php:/etc/phpmyadmin/config.user.inc.php
+      - ./.docker/data/athendum_phpmyadmin:/sessions
+    ports:
+      - "82:80"
+    environment:
+      PMA_ARBITRARY: "1"
+      PMA_HOST: "athendum_db"
+      PMA_USER: "root"
+      PMA_PASSWORD: "fr4cgmwh8iwf78r342ynier38"
+    links:
+      - athendum_db
+
+
+# ==============================================
+# Volumes
+# ==============================================
+volumes:
+  athendum_db_volume:
